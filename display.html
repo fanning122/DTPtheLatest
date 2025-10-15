@@ -1,0 +1,755 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>CMGAP提字器 - 显示端</title>
+    <style>
+        :root {
+            --harmony-scale: 1;
+            --scroll-position: 0px;
+        }
+        
+        body {
+            font-family: -apple-system, "HarmonyOS Sans", BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #222;
+            color: white;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            touch-action: none;
+            -webkit-overflow-scrolling: touch;
+        }
+        
+        .header {
+            background-color: #333;
+            padding: 1px;
+            text-align: center;
+            flex-shrink: 0;
+            height: 20px;
+            overflow: hidden;
+        }
+        
+        .header h1 {
+            font-size: 16px;
+            margin: 0;
+            line-height: 28px;
+        }
+        
+        .controls {
+            display: flex;
+            justify-content: center;
+            padding: 2px;
+            background-color: #444;
+            gap: 3px;
+            flex-wrap: wrap;
+            flex-shrink: 0;
+            height: auto;
+            min-height: 20px;
+        }
+        
+        button {
+            padding: 3px 6px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 16px;
+            min-width: 10px;
+            -webkit-tap-highlight-color: transparent;
+        }
+        
+        button:hover {
+            background-color: #45a049;
+        }
+        
+        button:disabled {
+            background-color: #cccccc;
+            cursor: not-allowed;
+        }
+        
+        .control-group {
+            display: flex;
+            align-items: center;
+            gap: 3px;
+            background-color: #555;
+            padding: 3px 3px;
+            border-radius: 6px;
+        }
+        
+        .teleprompter {
+            flex: 1;
+            overflow: hidden;
+            position: relative;
+            background-color: black;
+            margin: 10px;
+            border-radius: 8px;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            touch-action: none;
+        }
+        
+        .text-container {
+            width: 96%;
+            height: 96%;
+            overflow: hidden;
+            position: relative;
+        }
+        
+        #prompter-text {
+            font-size: calc(28px * var(--harmony-scale));
+            line-height: 1.8;
+            color: white;
+            position: absolute;
+            width: 100%;
+            text-align: center;
+            transition: transform 0.1s linear;
+            user-select: none;
+            padding: 15px;
+            box-sizing: border-box;
+            font-weight: 500;
+            will-change: transform;
+            white-space: pre-line;
+            text-indent: 2em;
+            margin: 0;
+            top: 0;
+            left: 0;
+            transform: translateY(var(--scroll-position, 0px));
+        }
+        
+        .text-container.mirror #prompter-text {
+            transform: scaleX(-1) translateY(var(--scroll-position, 0px)) !important;
+        }
+        
+        .use-top-positioning {
+            transform: none !important;
+            top: var(--text-position, 0px) !important;
+        }
+        
+        .text-container.mirror #prompter-text.use-top-positioning {
+            transform: scaleX(-1) !important;
+            top: var(--text-position, 0px) !important;
+        }
+        
+        textarea {
+            width: 96%;
+            min-height: 60px;
+            height: auto;
+            margin: 5px auto;
+            display: block;
+            padding: 8px;
+            font-size: 32px;
+            border-radius: 6px;
+            border: none;
+            flex-shrink: 0;
+            -webkit-appearance: none;
+            background-color: white;
+            color: black;
+        }
+        
+        #file-input {
+            display: none;
+        }
+        
+        .connection-status {
+            position: fixed;
+            top: 5px;
+            right: 5px;
+            padding: 5px 10px;
+            border-radius: 15px;
+            font-size: 12px;
+            z-index: 1000;
+            background-color: rgba(0, 0, 0, 0.7);
+        }
+        
+        .status-connected {
+            background-color: #4CAF50;
+            color: white;
+        }
+        
+        .status-disconnected {
+            background-color: #f44336;
+            color: white;
+        }
+        
+        .debug-info {
+            position: fixed;
+            bottom: 5px;
+            left: 5px;
+            padding: 5px 10px;
+            border-radius: 15px;
+            font-size: 10px;
+            z-index: 1000;
+            background-color: rgba(0, 0, 0, 0.7);
+            color: #ccc;
+            max-width: 200px;
+            word-break: break-all;
+        }
+        
+        @media screen and (max-width: 360px) {
+            #prompter-text {
+                font-size: calc(22px * var(--harmony-scale));
+            }
+            button {
+                padding: 8px 12px;
+                min-width: 50px;
+                font-size: 16px;
+            }
+        }
+
+        @media screen and (orientation: landscape) {
+            .header {
+                display: none;
+            }
+            
+            .header h1 {
+                font-size: 16px;
+                margin: 0;
+                line-height: 28px;
+            }
+
+            .teleprompter {
+                margin: 2px;
+                height: calc(100vh - 60px);
+                width: 70%;
+                margin-left: auto;
+                margin-right: auto;
+            }
+            
+            .text-container {
+                width: 100%;
+                height: 98% !important;
+            }
+            
+            #prompter-text {
+                font-size: calc(26px * var(--harmony-scale));
+                padding: 10px;
+            }
+            
+            .controls {
+                padding: 4px;
+                gap: 4px;
+            }
+            
+            .control-group {
+                padding: 4px 5px;
+            }
+            
+            button {
+                padding: 8px 5px;
+                min-width: 30px;
+            }
+            
+            textarea {
+                min-height: 50px;
+                height: auto;
+                margin: 3px auto;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="connection-status status-disconnected" id="connection-status">
+        遥控器: 未连接
+    </div>
+    
+    <div class="debug-info" id="debug-info">
+        连接状态: 等待连接...
+    </div>
+    
+    <div class="header">
+        <h1>CMGAP提字器 - 显示端</h1>
+    </div>
+    
+    <div class="controls">
+        <div class="control-group">
+            <button id="start-btn">开始</button>
+            <button id="pause-btn" disabled>暂停</button>
+            <button id="reset-btn">重置</button>
+        </div>
+        
+        <div class="control-group">
+            <label for="speed">速度:</label>
+            <input type="range" id="speed" min="1" max="20" value="5">
+            <span id="speed-value">5</span>
+        </div>
+        
+        <div class="control-group">
+            <label for="font-size">字体:</label>
+            <input type="range" id="font-size" min="16" max="48" value="28">
+            <span id="font-size-value">28px</span>
+        </div>
+        
+        <div class="control-group">
+            <button id="mirror-btn">镜像模式</button>
+            <button id="open-file-btn">打开文件</button>
+            <input type="file" id="file-input" accept=".txt,.text,.md,.markdown,.log,.csv,.json,.xml,.html,.htm">
+        </div>
+    </div>
+    
+    <div class="teleprompter" id="teleprompter-area">
+        <div class="text-container" id="text-container">
+            <div id="prompter-text">在这里输入您的文本。点击"开始"按钮开始滚动，使用速度滑块调整滚动速度。</div>
+        </div>
+    </div>
+    
+    <textarea id="input-text" placeholder="在此输入您的提词文本..."></textarea>
+    
+    <script>
+        // WebSocket连接管理
+        let ws = null;
+        let reconnectAttempts = 0;
+        const maxReconnectAttempts = 5;
+        
+        // 自动检测服务器地址 - 支持本地和 Heroku 部署
+        const isLocal = window.location.hostname === 'localhost' || 
+                        window.location.hostname === '127.0.0.1' ||
+                        window.location.hostname.includes('192.168.');
+
+        let serverUrl;
+        if (isLocal) {
+            // 本地开发环境
+            const serverHost = window.location.hostname;
+            const serverPort = window.location.port || '3000';
+            serverUrl = `ws://${serverHost}:${serverPort}?type=display`;
+        } else {
+            // 生产环境 - 连接到 Heroku
+            serverUrl = `wss://dtp-fab1bc8fc9e9.herokuapp.com?type=display`;
+        }
+        
+        function connectWebSocket() {
+            // 🎯 新增调试信息开始
+            console.log("=== DISPLAY 连接调试信息 ===");
+            console.log("1. 当前页面地址:", window.location.href);
+            console.log("2. 主机名:", window.location.hostname);
+            console.log("3. 是否本地环境:", isLocal);
+            console.log("4. 最终连接地址:", serverUrl);
+            console.log("=== 调试信息结束 ===");
+    
+            // 在页面上也显示连接信息（手机端能看到）
+            updateDebugInfo(`尝试连接到: ${serverUrl}`);
+            // 🎯 新增调试信息结束
+    
+            // 下面是你原有的代码
+            updateDebugInfo(`尝试连接: ${serverUrl}`);
+            
+            try {
+                ws = new WebSocket(serverUrl);
+                
+                ws.onopen = () => {
+                    console.log('已连接到WebSocket服务器');
+                    updateConnectionStatus(true);
+                    updateDebugInfo('已连接到服务器');
+                    reconnectAttempts = 0;
+                };
+                
+                ws.onmessage = (event) => {
+                    try {
+                        const data = JSON.parse(event.data);
+                        console.log('收到控制指令:', data);
+                        updateDebugInfo(`收到指令: ${data.type}`);
+                        handleRemoteControl(data);
+                    } catch (error) {
+                        console.error('解析控制指令错误:', error);
+                        updateDebugInfo('解析指令错误');
+                    }
+                };
+                
+                ws.onclose = (event) => {
+                    console.log('WebSocket连接断开:', event.code, event.reason);
+                    updateConnectionStatus(false);
+                    
+                    if (reconnectAttempts < maxReconnectAttempts) {
+                        reconnectAttempts++;
+                        const delay = Math.min(1000 * reconnectAttempts, 5000);
+                        updateDebugInfo(`连接断开，${delay/1000}秒后重试...`);
+                        setTimeout(connectWebSocket, delay);
+                    } else {
+                        updateDebugInfo('连接失败，请刷新页面重试');
+                    }
+                };
+                
+                ws.onerror = (error) => {
+                    console.error('WebSocket错误:', error);
+                    updateConnectionStatus(false);
+                    updateDebugInfo('连接错误');
+                };
+                
+            } catch (error) {
+                console.error('创建WebSocket失败:', error);
+                updateConnectionStatus(false);
+                updateDebugInfo('创建连接失败');
+            }
+        }
+        
+        function updateConnectionStatus(connected, message = '') {
+            const statusElement = document.getElementById('connection-status');
+    
+            if (connected) {
+                statusElement.textContent = '✅ 服务器: 已连接';
+                statusElement.style.color = 'green';
+                statusElement.style.fontSize = '18px';
+                statusElement.style.fontWeight = 'bold';
+            } else {
+                statusElement.textContent = '❌ 服务器: 未连接 - ' + message;
+                statusElement.style.color = 'red';
+                statusElement.style.fontSize = '18px';
+                statusElement.style.fontWeight = 'bold';
+            }
+        }
+        
+        function updateDebugInfo(message) {
+            const debugElement = document.getElementById('debug-info');
+            debugElement.textContent = message;
+            console.log('调试信息:', message);
+        }
+        
+        function handleRemoteControl(data) {
+            switch (data.type) {
+                case 'scroll':
+                    position = data.position;
+                    updatePosition();
+                    break;
+                
+                case 'scrollDelta':
+                     // 处理相对位移
+                     position += data.delta;
+                     updatePosition();
+            
+                     // 同步当前位置给控制端
+                     if (ws && ws.readyState === WebSocket.OPEN) {
+                         ws.send(JSON.stringify({
+                             type: 'positionUpdate',
+                             position: position,
+                             maxPosition: Math.max(0, textHeight - containerHeight)
+                         }));
+                     }
+                     break;
+    
+                case 'play':
+                    startScrolling();
+                    break;
+                    
+                case 'pause':
+                    pauseScrolling();
+                    break;
+                    
+                case 'doubleTap':
+                    if (isPlaying) pauseScrolling();
+                    else startScrolling();
+                    break;
+                
+                case 'requestPosition':
+                    // 响应位置请求
+                    if (ws && ws.readyState === WebSocket.OPEN) {
+                        ws.send(JSON.stringify({
+                            type: 'positionUpdate',
+                            position: position,
+                            maxPosition: Math.max(0, textHeight - containerHeight)
+                        }));
+                    }
+                    break;
+     
+                case 'textUpdate':
+                    prompterText.textContent = data.text;
+                    inputText.value = data.text;
+                    setTimeout(calculateHeights, 100);
+                    break;
+                    
+                case 'mirrorToggle':
+                    textContainer.classList.toggle('mirror');
+                    mirrorBtn.textContent = textContainer.classList.contains('mirror') ? '正常模式' : '镜像模式';
+                    break;
+                    
+                case 'welcome':
+                    updateDebugInfo(`服务器: ${data.message}`);
+                    break;
+
+                case 'positionUpdate':
+                     // 从显示端接收位置更新（用于双向同步）
+                     if (data.position !== undefined) {
+                         lastScrollPosition = data.position;
+                     }
+                     break;
+            }
+        }
+        
+        // 原有的所有JavaScript代码保持不变
+        const systemInfo = {
+            isIOS: /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream,
+            isAndroid: /Android/.test(navigator.userAgent),
+            isHarmonyOS: /HarmonyOS|HMOS/.test(navigator.userAgent),
+            isChrome: /Chrome/.test(navigator.userAgent),
+            isSafari: /Safari/.test(navigator.userAgent) && !/Chrome/.test(navigator.userAgent),
+            browser: navigator.userAgent
+        };
+        
+        const useTopPositioning = systemInfo.isIOS;
+        
+        if (systemInfo.isHarmonyOS) {
+            document.documentElement.style.setProperty('--harmony-scale', '1.1');
+        }
+        
+        if (systemInfo.isIOS) {
+            document.body.style.webkitUserSelect = 'none';
+            document.body.style.webkitTouchCallout = 'none';
+            document.getElementById('prompter-text').classList.add('use-top-positioning');
+        }
+        
+        const startBtn = document.getElementById('start-btn');
+        const pauseBtn = document.getElementById('pause-btn');
+        const resetBtn = document.getElementById('reset-btn');
+        const mirrorBtn = document.getElementById('mirror-btn');
+        const openFileBtn = document.getElementById('open-file-btn');
+        const fileInput = document.getElementById('file-input');
+        const speedSlider = document.getElementById('speed');
+        const speedValue = document.getElementById('speed-value');
+        const fontSizeSlider = document.getElementById('font-size');
+        const fontSizeValue = document.getElementById('font-size-value');
+        const prompterText = document.getElementById('prompter-text');
+        const inputText = document.getElementById('input-text');
+        const textContainer = document.getElementById('text-container');
+        const teleprompterArea = document.getElementById('teleprompter-area');
+        
+        let isPlaying = false;
+        let animationId;
+        let position = 0;
+        let speed = 5;
+        let fontSize = 28;
+        let touchStartY = 0;
+        let touchStartPosition = 0;
+        let isTouchMoving = false;
+        let touchCount = 0;
+        let lastTouchTime = 0;
+        let textHeight = 0;
+        let containerHeight = 0;
+                
+        function calculateHeights() {
+            const currentPosition = position;
+            
+            if (useTopPositioning) {
+                prompterText.style.setProperty('--text-position', '0px');
+            } else {
+                prompterText.style.setProperty('--scroll-position', '0px');
+            }
+            
+            prompterText.offsetHeight;
+            
+            containerHeight = textContainer.clientHeight;
+            textHeight = prompterText.scrollHeight;
+            
+            updatePosition();
+        }
+        
+        function updatePosition() {
+            const maxPosition = Math.max(0, textHeight - containerHeight);
+            position = Math.max(0, Math.min(position, maxPosition));
+            
+            if (useTopPositioning) {
+                prompterText.style.setProperty('--text-position', `-${position}px`);
+            } else {
+                prompterText.style.setProperty('--scroll-position', `-${position}px`);
+            }
+            
+            if (position >= maxPosition && isPlaying) {
+                pauseScrolling();
+            }
+        }
+        
+        function adjustInitialFontSize() {
+            const screenHeight = window.innerHeight;
+            if (screenHeight < 600) {
+                fontSize = 26;
+            } else if (screenHeight > 800) {
+                fontSize = 32;
+            }
+            fontSizeSlider.value = fontSize;
+            prompterText.style.fontSize = fontSize + 'px';
+            fontSizeValue.textContent = fontSize + 'px';
+        }
+        
+        speedSlider.addEventListener('input', function() {
+            speed = parseInt(this.value);
+            speedValue.textContent = speed;
+        });
+        
+        fontSizeSlider.addEventListener('input', function() {
+            fontSize = parseInt(this.value);
+            fontSizeValue.textContent = fontSize + 'px';
+            prompterText.style.fontSize = fontSize + 'px';
+            setTimeout(calculateHeights, 100);
+        });
+        
+        function startScrolling() {
+            if (!isPlaying) {
+                isPlaying = true;
+                startBtn.disabled = true;
+                pauseBtn.disabled = false;
+                calculateHeights();
+                animate();
+            }
+        }
+        
+        function pauseScrolling() {
+            if (isPlaying) {
+                isPlaying = false;
+                startBtn.disabled = false;
+                pauseBtn.disabled = true;
+                cancelAnimationFrame(animationId);
+            }
+        }
+        
+        startBtn.addEventListener('click', startScrolling);
+        pauseBtn.addEventListener('click', pauseScrolling);
+        
+        resetBtn.addEventListener('click', function() {
+            pauseScrolling();
+            position = 0;
+            updatePosition();
+        });
+        
+        mirrorBtn.addEventListener('click', function() {
+            textContainer.classList.toggle('mirror');
+            
+            if (textContainer.classList.contains('mirror')) {
+                mirrorBtn.textContent = '正常模式';
+            } else {
+                mirrorBtn.textContent = '镜像模式';
+            }
+        });
+        
+        openFileBtn.addEventListener('click', function() {
+            fileInput.click();
+        });
+        
+        fileInput.addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+            
+            if (file.size > 10 * 1024 * 1024) {
+                alert('文件太大，请选择小于10MB的文件');
+                return;
+            }
+            
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const content = e.target.result;
+                prompterText.textContent = content;
+                inputText.value = content;
+                setTimeout(calculateHeights, 100);
+            };
+            reader.onerror = function() {
+                alert('读取文件时出错');
+            };
+            reader.readAsText(file);
+        });
+        
+        inputText.addEventListener('input', function() {
+            prompterText.textContent = this.value || "在这里输入您的文本。点击\"开始\"按钮开始滚动，使用速度滑块调整滚动速度。";
+            setTimeout(calculateHeights, 100);
+        });
+        
+        function animate() {
+            position += speed / 10;
+            updatePosition();
+            
+            if (isPlaying) {
+                animationId = requestAnimationFrame(animate);
+            }
+        }
+        
+        // 原有的触摸事件处理保持不变
+        teleprompterArea.addEventListener('touchstart', function(e) {
+            const now = Date.now();
+            
+            if (now - lastTouchTime < 300) {
+                touchCount++;
+                if (touchCount === 2) {
+                    if (isPlaying) pauseScrolling();
+                    else startScrolling();
+                    e.preventDefault();
+                    touchCount = 0;
+                    return;
+                }
+            } else {
+                touchCount = 1;
+            }
+            lastTouchTime = now;
+            
+            if (isPlaying) pauseScrolling();
+            
+            touchStartY = e.touches[0].clientY;
+            touchStartPosition = position;
+            isTouchMoving = true;
+            e.preventDefault();
+        }, { passive: false });
+        
+        teleprompterArea.addEventListener('touchmove', function(e) {
+            if (!isTouchMoving) return;
+            
+            const touchY = e.touches[0].clientY;
+            const deltaY = touchY - touchStartY;
+            position = touchStartPosition - deltaY;
+            
+            updatePosition();
+            e.preventDefault();
+        }, { passive: false });
+        
+        teleprompterArea.addEventListener('touchend', function(e) {
+            isTouchMoving = false;
+            setTimeout(() => { touchCount = 0; }, 300);
+            e.preventDefault();
+        }, { passive: false });
+        
+        window.addEventListener('resize', function() {
+            setTimeout(calculateHeights, 100);
+        });
+        
+        window.addEventListener('orientationchange', function() {
+            setTimeout(() => {
+                calculateHeights();
+                updatePosition();
+            }, 300);
+        });
+        
+        function init() {
+            adjustInitialFontSize();
+            textContainer.style.height = '92%';
+            setTimeout(calculateHeights, 500);
+            connectWebSocket(); // 初始化WebSocket连接
+        }
+        
+        window.addEventListener('load', init);
+    </script>
+    <!-- 手机端调试面板 -->
+    <div id="mobile-debug" style="
+        position: fixed;
+        bottom: 10px;
+        left: 10px;
+        background: rgba(0,0,0,0.8);
+        color: white;
+        padding: 10px;
+        border-radius: 5px;
+        font-size: 12px;
+        max-width: 90%;
+        z-index: 10000;
+    ">
+        <div>状态: <span id="debug-status">等待连接...</span></div>
+        <div>消息: <span id="debug-message">-</span></div>
+        <div>时间: <span id="debug-time">-</span></div>
+    </div>
+
+    <script>
+    // 调试信息更新函数
+    function updateMobileDebug(status, message) {
+        document.getElementById('debug-status').textContent = status;
+        document.getElementById('debug-message').textContent = message;
+        document.getElementById('debug-time').textContent = new Date().toLocaleTimeString();
+    }
+    </script>
+</body>
+</html>
